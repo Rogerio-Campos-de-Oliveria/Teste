@@ -1,0 +1,64 @@
+-- 3.3. Estrutura das tabelas para armazenar os dados
+
+CREATE TABLE operadoras (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    registro_ans VARCHAR(10) UNIQUE,
+    cnpj VARCHAR(18),
+    razao_social VARCHAR(255),
+    nome_fantasia VARCHAR(255),
+    modalidade VARCHAR(100),
+    uf CHAR(2),
+    data_registro DATE,
+    situacao VARCHAR(50)
+);
+
+CREATE TABLE demonstracoes_contabeis (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    registro_ans VARCHAR(10),
+    ano INT,
+    trimestre INT,
+    categoria VARCHAR(255),
+    valor DECIMAL(15,2),
+    FOREIGN KEY (registro_ans) REFERENCES operadoras(registro_ans)
+);
+
+-- 3.4. Importação de dados (supondo que os arquivos CSV já estejam disponíveis no servidor)
+
+LOAD DATA INFILE 'C:\Users\pirul\Documents\Teste\MySQL\Operadoras de Plano de Saúde Ativas'  
+INTO TABLE operadoras
+FIELDS TERMINATED BY ';'
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(registro_ans, cnpj, razao_social, nome_fantasia, modalidade, uf, data_registro, situacao);
+
+LOAD DATA INFILE 'C:\Users\pirul\Documents\Teste\MySQL\Demonstrações Contábeis'
+INTO TABLE demonstracoes_contabeis
+FIELDS TERMINATED BY ';'
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(registro_ans, ano, trimestre, categoria, valor);
+
+-- 3.5. Consultas Analíticas
+
+-- Maiores despesas no último trimestre
+SELECT d.registro_ans, o.nome_fantasia, SUM(d.valor) AS total_despesas
+FROM demonstracoes_contabeis d
+JOIN operadoras o ON d.registro_ans = o.registro_ans
+WHERE d.categoria = 'EVENTOS/ SINISTROS CONHECIDOS OU AVISADOS DE ASSISTÊNCIA A SAÚDE MEDICO HOSPITALAR'
+  AND d.ano = YEAR(CURDATE())
+  AND d.trimestre = (QUARTER(CURDATE()) - 1)
+GROUP BY d.registro_ans, o.nome_fantasia
+ORDER BY total_despesas DESC
+LIMIT 10;
+
+-- Maiores despesas no último ano
+SELECT d.registro_ans, o.nome_fantasia, SUM(d.valor) AS total_despesas
+FROM demonstracoes_contabeis d
+JOIN operadoras o ON d.registro_ans = o.registro_ans
+WHERE d.categoria = 'EVENTOS/ SINISTROS CONHECIDOS OU AVISADOS DE ASSISTÊNCIA A SAÚDE MEDICO HOSPITALAR'
+  AND d.ano = YEAR(CURDATE()) - 1
+GROUP BY d.registro_ans, o.nome_fantasia
+ORDER BY total_despesas DESC
+LIMIT 10;
